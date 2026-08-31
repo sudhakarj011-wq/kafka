@@ -1,0 +1,20 @@
+# Global values are accessible by ALL subcharts.
+# This avoids duplicating MySQL password or Eureka URL in every microservice's values.yaml
+global:
+  eurekaUrl: "http://eureka-server:8761/eureka/"
+  mysql:
+    host: "mysql"
+    port: "3306"
+  kafka:
+    bootstrapServers: "kafka:29092"
+
+# You can also override subchart specific values from this master file:
+payment-service:
+  replicaCount: 1
+  service:
+    port: 8082
+
+banking-frontend:
+  replicaCount: 1
+  service:
+    port: 80

@@ -1,0 +1,63 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: notification-service
+  
+  # DataSource
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/notification_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC
+    username: root
+    password:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # JPA / Hibernate
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  # ======================== KAFKA CONSUMER ========================
+  # INTERVIEW TIP:
+  # Q: Why configure 'group-id' for consumers?
+  # A: Consumer Groups are Kafka's way of distributing workload.
+  #    - If 4 instances of notification-service share "notification-group",
+  #      Kafka splits the 4 partitions among them. Each message goes
+  #      to exactly ONE instance.
+  #    - The fraud-service will have its OWN group ("fraud-group"),
+  #      so it ALSO gets a copy of EVERY message. This is how Publish-Subscribe
+  #      works in Kafka.
+  #
+  # Q: Why 'earliest' for auto-offset-reset?
+  # A: If a new consumer group starts, it reads all past messages from
+  #    the topic (event sourcing) instead of just new ones ('latest').
+  # ================================================================
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: notification-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: "*"
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

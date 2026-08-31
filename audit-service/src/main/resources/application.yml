@@ -1,0 +1,50 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: audit-service
+  
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/audit_db?createDatabaseIfNotExist=true&useSSL=false
+    username: root
+    password:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  # ======================== KAFKA CONSUMER ========================
+  # Group ID: "audit-group"
+  # This service needs the raw JSON string as payload to store it.
+  # So we use StringDeserializer for BOTH key and value.
+  # We do NOT use JsonDeserializer here, because we aren't mapping 
+  # it to a POJO, we just want the raw string!
+  # ================================================================
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: audit-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

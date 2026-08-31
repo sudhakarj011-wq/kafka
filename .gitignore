@@ -1,0 +1,46 @@
+# ==========================
+# Java / Spring Boot
+# ==========================
+target/
+*.jar
+*.war
+*.ear
+*.class
+
+# Eclipse / STS / VSCode Java Configs
+.project
+.classpath
+.settings/
+.factorypath
+.vscode/
+.idea/
+*.iml
+
+# JVM Crash Logs
+hs_err_pid*.log
+replay_pid*.log
+*.log
+
+# ==========================
+# Node.js / Angular
+# ==========================
+node_modules/
+dist/
+.angular/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+banking-frontend/node_modules/
+banking-frontend/dist/
+banking-frontend/.angular/
+
+# ==========================
+# OS Generated Files
+# ==========================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

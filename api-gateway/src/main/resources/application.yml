@@ -1,0 +1,141 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  # ============================================================
+  # Spring Cloud Gateway — Route Configuration
+  #
+  # HOW ROUTING WORKS:
+  # Request: POST http://localhost:8080/api/payments/transfer
+  #    1. Gateway receives request
+  #    2. JWT Filter: validates Bearer token in Authorization header
+  #    3. Route match: /api/payments/** → payment-service
+  #    4. Gateway resolves "lb://payment-service" via Eureka
+  #    5. Forwards to: http://192.168.1.x:8082/api/payments/transfer
+  #
+  # lb:// = Load Balanced. Gateway uses Ribbon/LoadBalancer
+  # to distribute requests among multiple instances of a service.
+  #
+  # INTERVIEW TIP:
+  # Q: Why use an API Gateway?
+  # A: 1. Single entry point — Angular only needs ONE URL
+  #    2. Cross-cutting concerns in ONE place:
+  #       - JWT validation (not repeated in every service)
+  #       - Rate limiting, circuit breaker
+  #       - Logging, monitoring
+  #       - CORS for all services
+  #    3. Hide internal service topology from clients
+  #    4. Load balancing across service instances
+  # ============================================================
+  cloud:
+    gateway:
+      # Global CORS — Angular can call the Gateway from any origin
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOriginPatterns:
+              - "http://localhost:4200"
+              - "http://localhost:4201"
+              - "http://127.0.0.1:4200"
+              - "http://127.0.0.1:4201"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+
+      routes:
+        # ── Auth Service (Login/Register — PUBLIC, NO JWT filter) ────
+        # MUST be FIRST — before account-service route which has JwtAuthFilter
+        - id: auth-login
+          uri: lb://account-service
+          predicates:
+            - Path=/api/auth/**
+
+        # ── Account Register (PUBLIC — NO JWT filter) ─────────────────
+        - id: account-register
+          uri: lb://account-service
+          predicates:
+            - Path=/api/accounts/register
+            - Method=POST
+
+        # ── Account Service (JWT PROTECTED) ──────────────────────────
+        - id: account-service
+          uri: lb://account-service          # Eureka service discovery
+          predicates:
+            - Path=/api/accounts/**
+          filters:
+            - name: JwtAuthFilter            # Custom JWT validation filter
+
+        # ── Payment Service ──────────────────────────────────────
+        - id: payment-service
+          uri: lb://payment-service
+          predicates:
+            - Path=/api/payments/**
+          filters:
+            - name: JwtAuthFilter
+
+        # ── Notification Service ─────────────────────────────────
+        - id: notification-service
+          uri: lb://notification-service
+          predicates:
+            - Path=/api/notifications/**
+          filters:
+            - name: JwtAuthFilter
+
+        # ── Analytics Service ────────────────────────────────────
+        - id: analytics-service
+          uri: lb://analytics-service
+          predicates:
+            - Path=/api/analytics/**
+          filters:
+            - name: JwtAuthFilter
+
+        # ── Eureka Dashboard (for monitoring) ────────────────────
+        - id: eureka-dashboard
+          uri: http://localhost:8761
+          predicates:
+            - Path=/eureka/**
+
+# Eureka client — gateway registers itself and discovers services
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+
+# JWT secret — MUST match the secret used to sign tokens!
+# In production, store this in Vault or AWS Secrets Manager.
+jwt:
+  secret: "banking-payment-system-super-secret-key-2026-do-not-share-in-production"
+  expiration: 86400000  # 24 hours in milliseconds
+
+# Public paths — these bypass JWT filter
+gateway:
+  public-paths:
+    - /api/auth/login
+    - /api/auth/register
+    - /api/accounts/register
+    - /actuator/health
+    - /eureka
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    com.banking: DEBUG

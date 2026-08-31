@@ -1,0 +1,13 @@
+# These are local default values.
+# They can be overridden by the parent umbrella chart.
+replicaCount: 1
+
+image:
+  repository: fraud-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8084
+

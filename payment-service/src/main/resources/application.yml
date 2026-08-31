@@ -1,0 +1,81 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: payment-service
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/payment_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  # ──────────────────────────────────────────────────────────────
+  # Kafka Producer Configuration
+  #
+  # INTERVIEW TIP:
+  # Q: What serializers does Kafka use?
+  # A: Key → StringSerializer (transactionId is a String)
+  #    Value → JsonSerializer (PaymentEvent is a Java object → JSON)
+  #
+  # acks=all → Producer waits for ALL replica leaders to acknowledge
+  #            before considering message sent. Prevents data loss.
+  #
+  # retries=3 → If broker is temporarily unavailable, retry 3 times.
+  # ──────────────────────────────────────────────────────────────
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+      properties:
+        spring.json.add.type.headers: false
+        max.in.flight.requests.per.connection: 1  # Preserve ordering within partition
+
+# Eureka Client
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+
+# ──────────────────────────────────────────────────────────────
+# Account Service URL
+# In Phase 3 (Eureka), this will be replaced by service name:
+#   http://account-service
+# Feign will resolve it via Eureka automatically.
+# For Phase 2 (no Eureka), we use direct URL.
+# ──────────────────────────────────────────────────────────────
+account-service:
+  url: http://localhost:8081
+
+# Kafka Topic
+kafka:
+  topic:
+    payment-events: payment-events
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+logging:
+  level:
+    com.banking: DEBUG
+    org.apache.kafka: WARN

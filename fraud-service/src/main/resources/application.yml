@@ -1,0 +1,52 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: fraud-service
+  
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/fraud_db?createDatabaseIfNotExist=true&useSSL=false
+    username: root
+    password:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  # ======================== KAFKA CONSUMER ========================
+  # Notice the group-id is "fraud-group".
+  # Because this is DIFFERENT from "notification-group", this service
+  # gets its OWN copy of the "payment-events" topic.
+  # This is the beauty of Publish-Subscribe architecture!
+  # ================================================================
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: fraud-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: "*"
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

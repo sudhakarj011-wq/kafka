@@ -1,0 +1,10 @@
+replicaCount: 1
+
+image:
+  repository: banking-frontend
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: LoadBalancer # Frontend needs to be exposed to external traffic (LoadBalancer or NodePort)
+  port: 80

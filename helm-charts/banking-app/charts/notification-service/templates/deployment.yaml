@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-notification-service
+  labels:
+    app: notification-service
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+        - name: notification-service
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.port }}
+          env:
+            # Here we pull from the GLOBAL values file defined in the parent chart!
+            # This is the "Aha!" moment for the interview.
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              value: {{ .Values.global.eurekaUrl | quote }}
+            - name: MYSQL_HOST
+              value: {{ .Values.global.mysql.host | quote }}
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: {{ .Values.global.kafka.bootstrapServers | quote }}
+
