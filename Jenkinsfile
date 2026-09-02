@@ -25,21 +25,21 @@ pipeline {
                 stage('Account Service') {
                     steps {
                         dir('account-service') {
-                            sh 'mvn clean package -DskipTests'
+                            bat 'mvn clean package -DskipTests'
                         }
                     }
                 }
                 stage('Payment Service') {
                     steps {
                         dir('payment-service') {
-                            sh 'mvn clean package -DskipTests'
+                            bat 'mvn clean package -DskipTests'
                         }
                     }
                 }
                 stage('API Gateway') {
                     steps {
                         dir('api-gateway') {
-                            sh 'mvn clean package -DskipTests'
+                            bat 'mvn clean package -DskipTests'
                         }
                     }
                 }
@@ -50,8 +50,8 @@ pipeline {
             steps {
                 echo 'Compiling Angular Application...'
                 dir('banking-frontend') {
-                    sh 'npm install'
-                    sh 'npm run build --prod'
+                    bat 'npm install'
+                    bat 'npm run build --prod'
                 }
             }
         }
@@ -60,12 +60,12 @@ pipeline {
             parallel {
                 stage('Account Image') {
                     steps {
-                        sh 'docker build -t ${DOCKER_REGISTRY}/account-service:latest ./account-service'
+                        bat "docker build -t ${env.DOCKER_REGISTRY}/account-service:latest ./account-service"
                     }
                 }
                 stage('Payment Image') {
                     steps {
-                        sh 'docker build -t ${DOCKER_REGISTRY}/payment-service:latest ./payment-service'
+                        bat "docker build -t ${env.DOCKER_REGISTRY}/payment-service:latest ./payment-service"
                     }
                 }
             }
@@ -75,7 +75,7 @@ pipeline {
             steps {
                 echo 'Deploying Multi-Microservice Mesh via Helm Umbrella Chart...'
                 // One single command deploys all services thanks to Helm Umbrella pattern
-                sh 'helm upgrade --install ${HELM_RELEASE_NAME} ${HELM_CHART_PATH} --wait'
+                bat "helm upgrade --install ${env.HELM_RELEASE_NAME} ${env.HELM_CHART_PATH} --wait"
             }
         }
     }
