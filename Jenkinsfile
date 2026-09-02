@@ -2,6 +2,11 @@ pipeline {
     // Defines that this pipeline can run on any available Jenkins agent/worker node
     agent any
 
+    // Link the Maven installation from Jenkins UI (Matches the name 'Maven3')
+    tools {
+        maven 'Maven3'
+    }
+
     // Sets global environment variables used across all stages
     environment {
         DOCKER_REGISTRY = "sudhakar-registry" 
