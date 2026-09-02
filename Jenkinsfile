@@ -30,21 +30,21 @@ pipeline {
                 stage('Account Service') {
                     steps {
                         dir('account-service') {
-                            bat 'mvn clean package -DskipTests'
+                            bat 'mvn clean package -DskipTests -Dmaven.repo.local=.m2/repository'
                         }
                     }
                 }
                 stage('Payment Service') {
                     steps {
                         dir('payment-service') {
-                            bat 'mvn clean package -DskipTests'
+                            bat 'mvn clean package -DskipTests -Dmaven.repo.local=.m2/repository'
                         }
                     }
                 }
                 stage('API Gateway') {
                     steps {
                         dir('api-gateway') {
-                            bat 'mvn clean package -DskipTests'
+                            bat 'mvn clean package -DskipTests -Dmaven.repo.local=.m2/repository'
                         }
                     }
                 }
