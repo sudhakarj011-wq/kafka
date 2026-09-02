@@ -12,6 +12,8 @@ pipeline {
         DOCKER_REGISTRY = "sudhakar-registry" 
         HELM_RELEASE_NAME = "banking-app-release"
         HELM_CHART_PATH = "./helm-charts/banking-app"
+        // Add Docker to PATH so Jenkins can find it without Docker plugin
+        PATH = "C:\\Program Files\\Docker\\Docker\\resources\\bin;${env.PATH}"
     }
 
     stages {
