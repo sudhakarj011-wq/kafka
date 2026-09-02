@@ -90,6 +90,7 @@ public class Transaction {
 
     public enum TransactionStatus {
         INITIATED,
+        PENDING,
         SUCCESS,
         FAILED
     }

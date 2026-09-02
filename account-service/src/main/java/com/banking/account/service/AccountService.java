@@ -6,6 +6,8 @@ import com.banking.account.exception.AccountException;
 import com.banking.account.repository.AccountRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -73,11 +75,25 @@ public class AccountService {
 
     /**
      * Get account details by account number.
+     * Served from Redis if present, else queries MySQL.
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = "accounts", key = "#accountNumber")
     public AccountDto.AccountResponse getAccountByNumber(String accountNumber) {
         log.info("Fetching account: {}", accountNumber);
         Account account = findAccountOrThrow(accountNumber);
+        return mapToResponse(account);
+    }
+
+    /**
+     * Get account details by customer ID.
+     * Used by Angular frontend after login — resolves customerId → accountNumber.
+     */
+    @Transactional(readOnly = true)
+    public AccountDto.AccountResponse getAccountByCustomerId(String customerId) {
+        log.info("Fetching account for customerId: {}", customerId);
+        Account account = accountRepository.findByCustomerId(customerId)
+                .orElseThrow(() -> new AccountException.AccountNotFoundException("Customer: " + customerId));
         return mapToResponse(account);
     }
 
@@ -106,8 +122,10 @@ public class AccountService {
      * 3. Sufficient balance available
      *
      * @Transactional — ensures balance update is atomic.
+     * @CachePut — updates the Redis cache directly with the new AccountResponse.
      */
     @Transactional
+    @CachePut(value = "accounts", key = "#accountNumber")
     public AccountDto.AccountResponse debitAccount(String accountNumber,
                                                     AccountDto.BalanceUpdateRequest request) {
         log.info("Debiting account: {} amount: ₹{}", accountNumber, request.getAmount());
@@ -141,8 +159,10 @@ public class AccountService {
      * Called by Payment Service via OpenFeign during money transfer.
      *
      * @Transactional — ensures atomic update.
+     * @CachePut — ensures the updated account info overrides the stale info in Redis.
      */
     @Transactional
+    @CachePut(value = "accounts", key = "#accountNumber")
     public AccountDto.AccountResponse creditAccount(String accountNumber,
                                                      AccountDto.BalanceUpdateRequest request) {
         log.info("Crediting account: {} amount: ₹{}", accountNumber, request.getAmount());

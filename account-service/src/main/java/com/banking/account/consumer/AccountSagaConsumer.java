@@ -43,11 +43,11 @@ public class AccountSagaConsumer {
 
             try {
                 // Execute business logic (both debit and credit in same TX due to @Transactional)
-                AccountDto.UpdateBalanceRequest debitReq = new AccountDto.UpdateBalanceRequest(event.getAmount());
-                accountService.debit(event.getFromAccount(), debitReq);
+                AccountDto.BalanceUpdateRequest debitReq = new AccountDto.BalanceUpdateRequest(event.getAmount());
+                accountService.debitAccount(event.getFromAccount(), debitReq);
 
-                AccountDto.UpdateBalanceRequest creditReq = new AccountDto.UpdateBalanceRequest(event.getAmount());
-                accountService.credit(event.getToAccount(), creditReq);
+                AccountDto.BalanceUpdateRequest creditReq = new AccountDto.BalanceUpdateRequest(event.getAmount());
+                accountService.creditAccount(event.getToAccount(), creditReq);
 
                 // If successful, reply with SUCCESS
                 event.setStatus(SagaPaymentEvent.SagaStatus.SUCCESS);

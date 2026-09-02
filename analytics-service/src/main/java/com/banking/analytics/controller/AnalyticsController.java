@@ -1,7 +1,7 @@
 package com.banking.analytics.controller;
 
 import com.banking.analytics.entity.PaymentSummary;
-import com.banking.analytics.repository.AnalyticsRepositories;
+import com.banking.analytics.repository.PaymentSummaryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,7 +13,7 @@ import java.time.LocalDate;
 @RequiredArgsConstructor
 public class AnalyticsController {
 
-    private final AnalyticsRepositories.PaymentSummaryRepository summaryRepository;
+    private final PaymentSummaryRepository summaryRepository;
 
     @GetMapping("/summary")
     public ResponseEntity<PaymentSummary> getTodaySummary() {

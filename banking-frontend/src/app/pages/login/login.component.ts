@@ -138,7 +138,11 @@ export class LoginComponent {
         },
         error: (err) => {
           console.error('Login failed', err);
-          alert('Login failed. Ensure API Gateway and Account Service are running.');
+          if (err.status === 0) {
+             alert('Login failed: Network Error / CORS Issue. Ensure API Gateway allows origin 4201.');
+          } else {
+             alert(`Login failed (Status: ${err.status}). Ensure API Gateway & Account Service are up-to-date.`);
+          }
           this.isLoading = false;
         },
         complete: () => {

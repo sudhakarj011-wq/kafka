@@ -96,6 +96,20 @@ public class AccountController {
     }
 
     /**
+     * GET /api/accounts/by-customer/{customerId}
+     * Resolves a customerId (from JWT/localStorage) to full account details.
+     * Called by Angular at login to fetch and store the accountNumber.
+     * Allows the Dashboard to show live balance without any hardcoded mapping.
+     */
+    @GetMapping("/by-customer/{customerId}")
+    public ResponseEntity<AccountDto.AccountResponse> getAccountByCustomerId(
+            @PathVariable String customerId) {
+
+        log.info("API: Get account for customerId: {}", customerId);
+        return ResponseEntity.ok(accountService.getAccountByCustomerId(customerId));
+    }
+
+    /**
      * GET /api/accounts/{accountNumber}/balance
      * Get balance only — used by Angular Dashboard.
      *

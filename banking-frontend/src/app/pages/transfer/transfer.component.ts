@@ -136,9 +136,9 @@ export class TransferComponent {
     private auth: AuthService,
     private router: Router
   ) {
-    const custId = this.auth.getCustomerId();
-    // Assuming simple mapping again for demo
-    const fromAcc = custId === 'CUST001' ? 'ACC1001' : (custId === 'CUST002' ? 'ACC1002' : 'ACC1001');
+    // Use the accountNumber cached in localStorage by AuthService at login time
+    // No hardcoded mapping needed — works dynamically for any customer
+    const fromAcc = this.auth.getAccountNumber() || '';
 
     this.transferForm = this.fb.group({
       fromAccount: [fromAcc, Validators.required],

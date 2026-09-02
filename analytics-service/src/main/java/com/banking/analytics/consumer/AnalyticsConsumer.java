@@ -3,7 +3,8 @@ package com.banking.analytics.consumer;
 import com.banking.analytics.dto.PaymentEventDto;
 import com.banking.analytics.entity.PaymentSummary;
 import com.banking.analytics.entity.ProcessedEvent;
-import com.banking.analytics.repository.AnalyticsRepositories;
+import com.banking.analytics.repository.PaymentSummaryRepository;
+import com.banking.analytics.repository.ProcessedEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -18,8 +19,8 @@ import java.time.LocalDate;
 @Slf4j
 public class AnalyticsConsumer {
 
-    private final AnalyticsRepositories.PaymentSummaryRepository summaryRepository;
-    private final AnalyticsRepositories.ProcessedEventRepository processedEventRepository;
+    private final PaymentSummaryRepository summaryRepository;
+    private final ProcessedEventRepository processedEventRepository;
 
     @KafkaListener(topics = "payment-events", groupId = "analytics-group")
     @Transactional

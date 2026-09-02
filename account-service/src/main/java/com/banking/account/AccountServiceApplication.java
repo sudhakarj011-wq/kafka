@@ -4,6 +4,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 
+import org.springframework.cache.annotation.EnableCaching;
+
 /**
  * Account Service — Main Application
  *
@@ -24,6 +26,7 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
  */
 @SpringBootApplication
 @EnableDiscoveryClient  // Register with Eureka Service Discovery
+@EnableCaching          // Enable Spring Caching interceptors (AOP)
 public class AccountServiceApplication {
 
     public static void main(String[] args) {

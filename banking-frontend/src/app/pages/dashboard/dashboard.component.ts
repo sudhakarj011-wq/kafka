@@ -226,23 +226,21 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit(): void {
     const custId = this.authService.getCustomerId();
-    if(custId) {
-      // In a real app, we'd have a mapping mapping customer -> accountNumber 
-      // For this demo, let's assume AccountNumber maps directly to ACC + ID.
-      // e.g. CUST001 -> ACC1001. Let's just hardcode the mapping logic for demo:
-      const accNum = custId.replace('CUST', 'ACC') + '0'; 
-      // Actually, my test script used "ACC1001" for CUST001. Let's just fetch notifications based on custId directly!
-      
-      this.notificationService.getNotifications(custId).subscribe(res => {
-        this.notifications = res.slice(0, 5); // top 5
-      });
-      
-      this.summary$ = this.analyticsService.getTodaySummary();
+    const accNum = this.authService.getAccountNumber();
 
-      // We need an account number for the balance.
-      // Let's assume CUST001 is ACC1001.
-      const mappedAccNum = custId === 'CUST001' ? 'ACC1001' : (custId === 'CUST002' ? 'ACC1002' : 'ACC1001');
-      this.accountInfo$ = this.paymentService.getAccountInfo(mappedAccNum);
+    if (custId) {
+      // Fetch notifications using the customerId from localStorage (set at login)
+      this.notificationService.getNotifications(custId).subscribe(res => {
+        this.notifications = res.slice(0, 5); // show top 5
+      });
+
+      // Fetch today's live analytics from Analytics Kafka Consumer
+      this.summary$ = this.analyticsService.getTodaySummary();
+    }
+
+    if (accNum) {
+      // Fetch live balance — accountNumber was resolved+cached at login by AuthService
+      this.accountInfo$ = this.paymentService.getAccountInfo(accNum);
     }
   }
 

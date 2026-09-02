@@ -1,8 +1,8 @@
 package com.banking.payment.consumer;
 
-import com.banking.payment.entity.Payment;
+import com.banking.payment.entity.Transaction;
 import com.banking.payment.event.SagaPaymentEvent;
-import com.banking.payment.repository.PaymentRepository;
+import com.banking.payment.repository.TransactionRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +22,7 @@ import java.time.LocalDateTime;
 public class PaymentSagaConsumer {
 
     private final ObjectMapper objectMapper;
-    private final PaymentRepository paymentRepository;
+    private final TransactionRepository transactionRepository;
 
     private static final String SAGA_TOPIC = "saga-events";
 
@@ -40,21 +40,20 @@ public class PaymentSagaConsumer {
             log.info("Saga [Payment-Service] Received reply: TxnId={}, Status={}", 
                     event.getTransactionId(), event.getStatus());
 
-            Payment payment = paymentRepository.findByTransactionId(event.getTransactionId())
-                    .orElseThrow(() -> new RuntimeException("Saga Payment not found"));
+            Transaction transaction = transactionRepository.findByTransactionId(event.getTransactionId())
+                    .orElseThrow(() -> new RuntimeException("Saga Transaction not found"));
 
             if (event.getStatus() == SagaPaymentEvent.SagaStatus.SUCCESS) {
-                payment.setStatus(Payment.PaymentStatus.SUCCESS);
+                transaction.setStatus(Transaction.TransactionStatus.SUCCESS);
                 log.info("Saga [Payment-Service] Transaction {} COMPLETED successfully.", event.getTransactionId());
             } else if (event.getStatus() == SagaPaymentEvent.SagaStatus.FAILED) {
-                payment.setStatus(Payment.PaymentStatus.FAILED);
+                transaction.setStatus(Transaction.TransactionStatus.FAILED);
                 // In a real app we'd save event.getMessage() to a failure_reason column
                 log.info("Saga [Payment-Service] COMPENSATING ACTION. Transaction {} FAILED. Reason: {}", 
                         event.getTransactionId(), event.getMessage());
             }
 
-            payment.setTimestamp(LocalDateTime.now());
-            paymentRepository.save(payment);
+            transactionRepository.save(transaction);
 
         } catch (Exception e) {
             log.error("Saga [Payment-Service] Failed to process reply: {}", e.getMessage());

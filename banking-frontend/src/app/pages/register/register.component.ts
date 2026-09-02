@@ -195,7 +195,12 @@ export class RegisterComponent {
           setTimeout(() => this.router.navigate(['/login']), 1500);
         },
         error: (err) => {
-          this.errorMessage = err.error?.message || 'Registration failed. Please try again.';
+          console.error('Registration error detailing:', err);
+          if (err.status === 0) {
+            this.errorMessage = 'Network Error / CORS Issue. Please ensure API Gateway is running and CORS allows port 4201.';
+          } else {
+            this.errorMessage = err.error?.message || `Registration failed (Status: ${err.status}). Please try again.`;
+          }
           this.isLoading = false;
         },
         complete: () => {
