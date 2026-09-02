@@ -14,7 +14,7 @@ pipeline {
             steps {
                 echo 'Checking out source code from Git repository...'
                 // Automatically pulls the latest code from your awesome new GitHub repo!
-                git url: 'https://github.com/sudhakarj011-wq/kafka.git', branch: 'main'
+                git url: 'https://github.com/sudhakarj011-wq/kafka.git', branch: 'master'
             }
         }
 
