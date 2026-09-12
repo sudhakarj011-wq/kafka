@@ -1,19 +1,28 @@
 server:
   port: 8082
+  shutdown: graceful
 
 spring:
   application:
     name: payment-service
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
+  # Pull configuration from Centralized Config Server
+  config:
+    import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
 
   datasource:
     url: jdbc:mysql://localhost:3306/payment_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
-    username: root
-    password:
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:rootpassword}  # Matches docker-compose.yml MYSQL_ROOT_PASSWORD
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
     hibernate:
-      ddl-auto: update
+      # PRODUCTION SAFE: 'validate' checks schema matches entities, but never alters tables.
+      # Use 'update' only in local dev. Use 'none' in cloud/K8s (managed by Flyway/Liquibase).
+      ddl-auto: validate
     show-sql: true
     properties:
       hibernate:
@@ -68,14 +77,45 @@ kafka:
   topic:
     payment-events: payment-events
 
-# Actuator
+# Actuator & Tracing
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
+  tracing:
+    sampling:
+      probability: 1.0 # 100% traces for local dev
+  zipkin:
+    tracing:
+      endpoint: http://localhost:4318/v1/traces  # Jaeger OTLP HTTP endpoint
 
 logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
   level:
     com.banking: DEBUG
     org.apache.kafka: WARN
+
+# ──────────────────────────────────────────────────────────────
+# Resilience4j Circuit Breaker
+# ──────────────────────────────────────────────────────────────
+resilience4j:
+  circuitbreaker:
+    instances:
+      accountGrpcClient:
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        slidingWindowSize: 10
+        permittedNumberOfCallsInHalfOpenState: 3
+
+# ──────────────────────────────────────────────────────────────
+# Razorpay Payment Gateway Configuration
+# key-id and key-secret: from Razorpay Dashboard → Settings → API Keys
+# Use TEST keys for development (prefix: rzp_test_)
+# Use LIVE keys for production (prefix: rzp_live_)
+# ──────────────────────────────────────────────────────────────
+razorpay:
+  key-id: ${RAZORPAY_KEY_ID:rzp_test_xxxxxxxxxxxxxxxxxx}
+  key-secret: ${RAZORPAY_KEY_SECRET:xxxxxxxxxxxxxxxxxxxxxxxx}
+  webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:your_webhook_secret_here}

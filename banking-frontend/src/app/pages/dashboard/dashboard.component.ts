@@ -1,7 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { AsyncPipe, CurrencyPipe, DatePipe, NgFor, NgIf } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
-import { PaymentService, AccountInfo } from '../../services/payment.service';
+import { AccountService, AccountInfo } from '../../services/account.service';
+import { PaymentService } from '../../services/payment.service';
 import { AnalyticsService, PaymentSummary } from '../../services/analytics.service';
 import { NotificationService, Notification } from '../../services/notification.service';
 import { RouterLink } from '@angular/router';
@@ -219,6 +220,7 @@ export class DashboardComponent implements OnInit {
 
   constructor(
     private authService: AuthService,
+    private accountService: AccountService,
     private paymentService: PaymentService,
     private analyticsService: AnalyticsService,
     private notificationService: NotificationService
@@ -239,8 +241,9 @@ export class DashboardComponent implements OnInit {
     }
 
     if (accNum) {
-      // Fetch live balance — accountNumber was resolved+cached at login by AuthService
-      this.accountInfo$ = this.paymentService.getAccountInfo(accNum);
+      // Fetch live balance via AccountService (gRPC-backed)
+      // Angular sends REST → Spring Boot → gRPC → account-service
+      this.accountInfo$ = this.accountService.getAccount(accNum);
     }
   }
 

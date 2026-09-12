@@ -24,6 +24,7 @@ export const routes: Routes = [
       { path: 'dashboard', loadComponent: () => import('./pages/dashboard/dashboard.component').then(c => c.DashboardComponent) },
       { path: 'transfer', loadComponent: () => import('./pages/transfer/transfer.component').then(c => c.TransferComponent) },
       { path: 'history', loadComponent: () => import('./pages/history/history.component').then(c => c.HistoryComponent) },
+      { path: 'deposit', loadComponent: () => import('./pages/deposit/razorpay-payment.component').then(c => c.RazorpayPaymentComponent) },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
   }

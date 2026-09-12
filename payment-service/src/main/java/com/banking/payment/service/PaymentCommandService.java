@@ -1,6 +1,6 @@
 package com.banking.payment.service;
 
-import com.banking.payment.client.AccountServiceClient;
+import com.banking.payment.grpc.AccountGrpcClient;
 import com.banking.payment.dto.AccountClientDto;
 import com.banking.payment.dto.PaymentDto;
 import com.banking.payment.entity.OutboxEvent;
@@ -10,7 +10,6 @@ import com.banking.payment.event.SagaPaymentEvent;
 import com.banking.payment.repository.OutboxEventRepository;
 import com.banking.payment.repository.TransactionRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -29,7 +28,7 @@ import java.util.UUID;
 @Slf4j
 public class PaymentCommandService {
 
-    private final AccountServiceClient accountServiceClient;
+    private final AccountGrpcClient accountGrpcClient;
     private final TransactionRepository transactionRepository;
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
@@ -113,14 +112,10 @@ public class PaymentCommandService {
         log.info("Transaction saved: {} [INITIATED]", transactionId);
 
         try {
-            AccountClientDto.BalanceUpdateRequest debitReq =
-                    new AccountClientDto.BalanceUpdateRequest(request.getAmount());
-            accountServiceClient.debitAccount(request.getFromAccount(), debitReq);
+            accountGrpcClient.debitAccount(request.getFromAccount(), request.getAmount());
             log.info("✅ Debited ₹{} from {}", request.getAmount(), request.getFromAccount());
 
-            AccountClientDto.BalanceUpdateRequest creditReq =
-                    new AccountClientDto.BalanceUpdateRequest(request.getAmount());
-            accountServiceClient.creditAccount(request.getToAccount(), creditReq);
+            accountGrpcClient.creditAccount(request.getToAccount(), request.getAmount());
             log.info("✅ Credited ₹{} to {}", request.getAmount(), request.getToAccount());
 
             transaction.setStatus(Transaction.TransactionStatus.SUCCESS);
@@ -138,14 +133,8 @@ public class PaymentCommandService {
                     request.getToAccount(),
                     request.getAmount());
 
-        } catch (FeignException e) {
-            log.error("Account Service call failed for {}: {}", transactionId, e.getMessage());
-            transaction.setStatus(Transaction.TransactionStatus.FAILED);
-            transactionRepository.save(transaction);
-            throw new RuntimeException("Transfer failed: " + e.getMessage());
-
         } catch (Exception e) {
-            log.error("Transfer failed {}: {}", transactionId, e.getMessage());
+            log.error("Transfer error for {}: {}", transactionId, e.getMessage());
             transaction.setStatus(Transaction.TransactionStatus.FAILED);
             transactionRepository.save(transaction);
             throw new RuntimeException("Transfer failed: " + e.getMessage());
@@ -154,10 +143,11 @@ public class PaymentCommandService {
 
     private AccountClientDto.AccountResponse validateAccount(String accountNumber) {
         try {
-            return accountServiceClient.getAccount(accountNumber);
-        } catch (FeignException.NotFound e) {
-            throw new RuntimeException("Account not found: " + accountNumber);
-        } catch (FeignException e) {
+            return accountGrpcClient.getAccount(accountNumber);
+        } catch (RuntimeException e) {
+            if (e.getMessage() != null && (e.getMessage().contains("NOT_FOUND") || e.getMessage().contains("not found"))) {
+                throw new RuntimeException("Account not found: " + accountNumber);
+            }
             throw new RuntimeException("Account Service unavailable: " + e.getMessage());
         }
     }

@@ -1,0 +1,6 @@
+# account-service centralized configuration
+# INTERVIEW TIP:
+# This file is served by config-server at http://config-server:8888/account-service/default
+
+custom:
+  message: "Hello from Centralized Config Server! (Account Service)"

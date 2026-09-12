@@ -77,10 +77,27 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Spring Cloud Config Client -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-config</artifactId>
+        </dependency>
+
         <!-- Actuator -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!--
+            Redis Reactive — required for Spring Cloud Gateway RequestRateLimiter filter.
+            Gateway uses Redis to track request counts per IP/user (sliding window).
+            INTERVIEW TIP: Gateway is reactive (WebFlux), so we need the *reactive* Redis client.
+            Regular spring-boot-starter-data-redis (non-reactive) will NOT work here.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis-reactive</artifactId>
         </dependency>
     </dependencies>
 

@@ -1,0 +1,21 @@
+server:
+  port: 8888
+
+spring:
+  application:
+    name: config-server
+  profiles:
+    active: native  # Use local filesystem instead of Git for simplicity
+  cloud:
+    config:
+      server:
+        native:
+          # In 'native' mode, config server looks here for files like payment-service.yml
+          search-locations: classpath:/config/
+
+  # SECURITY: Basic Auth protects /payment-service/default from unauthorized access
+  # INTERVIEW TIP: In production, use mTLS or OAuth2 client credentials instead of basic auth
+  security:
+    user:
+      name: ${CONFIG_SERVER_USERNAME:config-admin}
+      password: ${CONFIG_SERVER_PASSWORD:config-secret}

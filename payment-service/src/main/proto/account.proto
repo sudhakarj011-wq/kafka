@@ -1,0 +1,48 @@
+// =====================================================================
+// account.proto — gRPC Service Contract (SHARED with account-service)
+//
+// INTERVIEW TIP — Why same .proto file in both services?
+// Both server and client MUST use the IDENTICAL .proto definition.
+// The protoc compiler generates Java classes from this file in BOTH services.
+// This guarantees type-safe communication — like a shared API contract.
+//
+// In enterprise setups, this file lives in a shared Maven module
+// (e.g., banking-grpc-api) and both services depend on it.
+// For this project, we maintain the same file in both services.
+// CRITICAL: If you change the proto in one service, change it in both!
+//
+// INTERVIEW TIP — Backward compatibility rules:
+// SAFE changes:    Add new fields with new numbers, add new RPC methods
+// BREAKING changes: Remove fields, rename fields, change field numbers
+// =====================================================================
+syntax = "proto3";
+
+option java_package = "com.banking.grpc";
+option java_multiple_files = true;
+option java_outer_classname = "AccountProto";
+
+package account;
+
+service AccountService {
+    rpc GetAccount(GetAccountRequest) returns (AccountResponse);
+    rpc DebitAccount(BalanceUpdateRequest) returns (AccountResponse);
+    rpc CreditAccount(BalanceUpdateRequest) returns (AccountResponse);
+}
+
+message GetAccountRequest {
+    string account_number = 1;
+}
+
+message BalanceUpdateRequest {
+    string account_number = 1;
+    double amount = 2;
+}
+
+message AccountResponse {
+    int64  id              = 1;
+    string account_number  = 2;
+    string customer_id     = 3;
+    string customer_name   = 4;
+    double balance         = 5;
+    string status          = 6;
+}

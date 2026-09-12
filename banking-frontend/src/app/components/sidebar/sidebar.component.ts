@@ -21,6 +21,9 @@ import { Router } from '@angular/router';
         <a routerLink="/transfer" routerLinkActive="active" class="nav-item">
           <span>💸</span> Transfer
         </a>
+        <a routerLink="/deposit" routerLinkActive="active" class="nav-item">
+          <span>💳</span> Deposit Money
+        </a>
         <a routerLink="/history" routerLinkActive="active" class="nav-item">
           <span>📜</span> History
         </a>

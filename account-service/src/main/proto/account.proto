@@ -1,0 +1,112 @@
+// =====================================================================
+// account.proto — gRPC Service Contract for Account Service
+//
+// INTERVIEW TIP — What is a .proto file?
+// It is the IDL (Interface Definition Language) for gRPC.
+// Think of it like a Swagger/OpenAPI spec but for gRPC.
+// Both the SERVER and CLIENT must use the same .proto file
+// to ensure type-safe communication.
+//
+// INTERVIEW TIP — Proto3 vs Proto2?
+// proto3 (used here) is the modern version:
+// - All fields are optional by default
+// - No required/optional keywords
+// - Default values auto-assigned (string="", int32=0, bool=false)
+// - Better backward/forward compatibility
+//
+// INTERVIEW TIP — What does protoc generate from this file?
+// 1. AccountRequest.java, AccountResponse.java etc. (message classes)
+// 2. AccountServiceGrpc.java (contains):
+//    - AccountServiceImplBase → Server extends this
+//    - AccountServiceBlockingStub → Client uses this for sync calls
+//    - AccountServiceFutureStub → Client uses for async (Future-based)
+//    - AccountServiceStub → Client uses for async (callback-based)
+// =====================================================================
+syntax = "proto3";
+
+// Java package for generated classes
+option java_package = "com.banking.grpc";
+// Generates ONE file per message instead of one giant file
+option java_multiple_files = true;
+// Name of the outer class wrapping all generated classes (if java_multiple_files=false)
+option java_outer_classname = "AccountProto";
+
+// Proto package — prevents naming conflicts across proto files in large systems
+package account;
+
+// =====================================================================
+// AccountService — defines 3 gRPC operations replacing 3 Feign calls:
+//
+// INTERVIEW TIP — RPC Types:
+// 1. Unary (used here): Client sends ONE request, Server returns ONE response
+//    rpc GetAccount(Request) returns (Response)
+//    → Like a normal Java method call
+//
+// 2. Server Streaming: Client sends one request, Server streams many responses
+//    rpc WatchTransactions(Request) returns (stream Response)
+//    → Like a Java Iterator-based method
+//
+// 3. Client Streaming: Client streams many requests, Server returns one response
+//    rpc UploadBulkPayments(stream Request) returns (Response)
+//
+// 4. Bidirectional Streaming: Both sides stream simultaneously
+//    rpc Chat(stream Request) returns (stream Response)
+//    → Like WebSockets
+//
+// We use UNARY for all 3 operations — cleanest pattern for request/response.
+// =====================================================================
+service AccountService {
+
+    // Get account details by account number
+    // Replaces: accountServiceClient.getAccount(accountNumber) [Feign]
+    rpc GetAccount(GetAccountRequest) returns (AccountResponse);
+
+    // Debit (subtract) amount from account
+    // Replaces: accountServiceClient.debitAccount(accountNumber, request) [Feign]
+    rpc DebitAccount(BalanceUpdateRequest) returns (AccountResponse);
+
+    // Credit (add) amount to account
+    // Replaces: accountServiceClient.creditAccount(accountNumber, request) [Feign]
+    rpc CreditAccount(BalanceUpdateRequest) returns (AccountResponse);
+}
+
+// =====================================================================
+// Request Messages
+// =====================================================================
+
+// Request for GetAccount RPC
+message GetAccountRequest {
+    // field_number (=1) is the binary encoding tag — never change it once deployed!
+    // INTERVIEW TIP: Field numbers identify fields in binary encoding.
+    // Changing a field number = breaking change (binary incompatibility).
+    string account_number = 1;
+}
+
+// Request for DebitAccount and CreditAccount RPCs
+message BalanceUpdateRequest {
+    string account_number = 1;
+
+    // double is used for monetary amounts in proto3.
+    // INTERVIEW TIP: In production, prefer string (BigDecimal.toString())
+    // or int64 (store amount in paise/cents) to avoid floating-point issues.
+    // We use double here for simplicity matching existing BigDecimal behavior.
+    double amount = 2;
+}
+
+// =====================================================================
+// Response Message — mirrors AccountClientDto.AccountResponse in payment-service
+// and AccountDto.AccountResponse in account-service
+//
+// INTERVIEW TIP — Why duplicate the fields?
+// gRPC is language/framework agnostic. The proto message is the
+// canonical contract. Java classes are generated FROM proto.
+// There is intentionally NO dependency on existing Java DTOs.
+// =====================================================================
+message AccountResponse {
+    int64  id              = 1;  // DB primary key
+    string account_number  = 2;
+    string customer_id     = 3;
+    string customer_name   = 4;
+    double balance         = 5;
+    string status          = 6;  // "ACTIVE" | "INACTIVE"
+}

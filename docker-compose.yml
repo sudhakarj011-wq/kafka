@@ -26,6 +26,11 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     networks:
       - banking-net
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -50,6 +55,20 @@ services:
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     networks:
       - banking-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis — used by account-service for @Cacheable (balance/account caching)
+  redis:
+    image: redis:7.2-alpine
+    container_name: banking-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - banking-net
 
   # ==========================================
   # PLATFORM SERVICES
@@ -61,14 +80,32 @@ services:
     networks:
       - banking-net
 
+  config-server:
+    build: ./config-server
+    ports:
+      - "8888:8888"
+    depends_on:
+      - eureka-server
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SPRING_SECURITY_USER_NAME=${CONFIG_SERVER_USERNAME}
+      - SPRING_SECURITY_USER_PASSWORD=${CONFIG_SERVER_PASSWORD}
+    networks:
+      - banking-net
+
   api-gateway:
     build: ./api-gateway
     ports:
       - "8080:8080"
     depends_on:
       - eureka-server
+      - redis
     environment:
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION}
+      - SPRING_REDIS_HOST=${REDIS_HOST}
+      - SPRING_REDIS_PORT=${REDIS_PORT}
     networks:
       - banking-net
 
@@ -80,11 +117,20 @@ services:
     ports:
       - "8081:8081"
     depends_on:
-      - mysql
-      - eureka-server
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      eureka-server:
+        condition: service_started
     environment:
-      - MYSQL_HOST=mysql
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/account_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - SPRING_REDIS_HOST=${REDIS_HOST}
+      - SPRING_REDIS_PORT=${REDIS_PORT}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_URL}
+      - CONFIG_SERVER_URL=http://${CONFIG_SERVER_USERNAME}:${CONFIG_SERVER_PASSWORD}@config-server:8888
     networks:
       - banking-net
 
@@ -93,13 +139,22 @@ services:
     ports:
       - "8082:8082"
     depends_on:
-      - mysql
-      - kafka
-      - eureka-server
+      mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
     environment:
-      - MYSQL_HOST=mysql
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/payment_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_URL}
+      - CONFIG_SERVER_URL=http://${CONFIG_SERVER_USERNAME}:${CONFIG_SERVER_PASSWORD}@config-server:8888
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET}
+      - RAZORPAY_WEBHOOK_SECRET=${RAZORPAY_WEBHOOK_SECRET}
     networks:
       - banking-net
 
@@ -108,9 +163,12 @@ services:
     ports:
       - "8083:8083"
     depends_on:
-      - mysql
-      - kafka
-      - eureka-server
+      mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
     environment:
       - MYSQL_HOST=mysql
       - KAFKA_BOOTSTRAP_SERVERS=kafka:29092

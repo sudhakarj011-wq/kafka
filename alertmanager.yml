@@ -1,0 +1,17 @@
+route:
+  group_by: ['alertname']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'mock-pagerduty-webhook'
+
+receivers:
+  - name: 'mock-pagerduty-webhook'
+    webhook_configs:
+      - url: 'http://host.docker.internal:8080/api/mock-pagerduty'
+        send_resolved: true
+
+# INTERVIEW TIP: 
+# In a real enterprise system, 'pagerduty_configs', 'slack_configs' or 'email_configs'
+# are configured here. When an alert (like HighErrorRate) triggers, Alertmanager
+# deduplicates, groups, and routes the alert to the on-call engineer's phone.

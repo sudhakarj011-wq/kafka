@@ -1,9 +1,22 @@
 server:
   port: 8080
+  shutdown: graceful
 
 spring:
   application:
     name: api-gateway
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
+  # Pull configuration from Centralized Config Server
+  config:
+    import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
+
+  # Redis configuration for Rate Limiting (RequestRateLimiter filter uses Redis)
+  data:
+    redis:
+      host: ${SPRING_REDIS_HOST:localhost}
+      port: ${SPRING_REDIS_PORT:6379}
 
   # ============================================================
   # Spring Cloud Gateway — Route Configuration
@@ -57,45 +70,66 @@ spring:
         - id: auth-login
           uri: lb://account-service
           predicates:
-            - Path=/api/auth/**
+            - Path=/api/v1/auth/**
+          filters:
+            - RewritePath=/api/v1/(?<segment>.*), /api/$\{segment}
 
         # ── Account Register (PUBLIC — NO JWT filter) ─────────────────
         - id: account-register
           uri: lb://account-service
           predicates:
-            - Path=/api/accounts/register
+            - Path=/api/v1/accounts/register
             - Method=POST
+          filters:
+            - RewritePath=/api/v1/(?<segment>.*), /api/$\{segment}
 
-        # ── Account Service (JWT PROTECTED) ──────────────────────────
+        # ── Account Service (JWT PROTECTED + Rate Limited) ──────────────────────────
         - id: account-service
           uri: lb://account-service          # Eureka service discovery
           predicates:
-            - Path=/api/accounts/**
+            - Path=/api/v1/accounts/**
           filters:
+            - RewritePath=/api/v1/(?<segment>.*), /api/$\{segment}
             - name: JwtAuthFilter            # Custom JWT validation filter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@ipKeyResolver}"
 
-        # ── Payment Service ──────────────────────────────────────
+        # ── Payment Service (JWT PROTECTED + Strict Rate Limiting + Idempotent) ─────
         - id: payment-service
           uri: lb://payment-service
           predicates:
-            - Path=/api/payments/**
+            - Path=/api/v1/payments/**
           filters:
+            - RewritePath=/api/v1/(?<segment>.*), /api/$\{segment}
             - name: JwtAuthFilter
+            - name: IdempotencyFilter        # Prevents double-charging (Gap 5)
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 10
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@ipKeyResolver}"
 
         # ── Notification Service ─────────────────────────────────
         - id: notification-service
           uri: lb://notification-service
           predicates:
-            - Path=/api/notifications/**
+            - Path=/api/v1/notifications/**
           filters:
+            - RewritePath=/api/v1/(?<segment>.*), /api/$\{segment}
             - name: JwtAuthFilter
 
         # ── Analytics Service ────────────────────────────────────
         - id: analytics-service
           uri: lb://analytics-service
           predicates:
-            - Path=/api/analytics/**
+            - Path=/api/v1/analytics/**
           filters:
+            - RewritePath=/api/v1/(?<segment>.*), /api/$\{segment}
             - name: JwtAuthFilter
 
         # ── Eureka Dashboard (for monitoring) ────────────────────
@@ -114,18 +148,19 @@ eureka:
   instance:
     prefer-ip-address: true
 
-# JWT secret — MUST match the secret used to sign tokens!
-# In production, store this in Vault or AWS Secrets Manager.
+# JWT Configuration
+# SECURITY: Secret is loaded from environment variable (set in .env or Docker/Kubernetes secrets)
+# NEVER hardcode secrets in application.yml or commit to Git!
 jwt:
-  secret: "banking-payment-system-super-secret-key-2026-do-not-share-in-production"
-  expiration: 86400000  # 24 hours in milliseconds
+  secret: ${JWT_SECRET:banking-payment-system-super-secret-key-2026-do-not-share-in-production}
+  expiration: ${JWT_EXPIRATION:86400000}
 
-# Public paths — these bypass JWT filter
+# Public paths — these bypass JWT filter (updated to match v1 routes)
 gateway:
   public-paths:
-    - /api/auth/login
-    - /api/auth/register
-    - /api/accounts/register
+    - /api/v1/auth/login
+    - /api/v1/auth/register
+    - /api/v1/accounts/register
     - /actuator/health
     - /eureka
 

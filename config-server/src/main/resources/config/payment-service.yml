@@ -1,0 +1,7 @@
+# payment-service centralized configuration
+# INTERVIEW TIP:
+# This file is served by config-server at http://config-server:8888/payment-service/default
+# All instances of payment-service will automatically pull this configuration on startup.
+
+custom:
+  message: "Hello from Centralized Config Server! (Payment Service)"
